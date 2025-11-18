@@ -21,21 +21,40 @@ const ICON_INFO = require("../images/Vector.png"); // small red circle with ?
 const ICON_CAMERA = require("../images/camera.png"); // camera icon inside circle
 
 export default function DetailsScreen({ navigation }) {
-  const [itemType, setItemType] = useState("");
+  const [itemType, setItemType] = useState(""); // will be selected from inline dropdown
   const [quantity, setQuantity] = useState("");
   const [payer, setPayer] = useState("me"); // "me" | "recipient"
-  const [paymentType, setPaymentType] = useState("");
-  const [recipientName, setRecipientName] = useState("Name");
-  const [recipientContact, setRecipientContact] = useState("Phone Number");
+  const [paymentType, setPaymentType] = useState(""); // selected from inline dropdown
+  const [recipientName, setRecipientName] = useState(""); // empty -> show placeholder
+  const [recipientContact, setRecipientContact] = useState(""); // empty -> show placeholder
 
   // image from camera
   const [photoUri, setPhotoUri] = useState(null);
 
+  // inline dropdown visibility
+  const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+
+  const ITEM_OPTIONS = [
+    { id: "gadget", label: "Gadget" },
+    { id: "document", label: "Document" },
+  ];
+
+  const PAYMENT_OPTIONS = [
+    { id: "upi", label: "UPI" },
+    { id: "cash", label: "Cash" },
+    { id: "card", label: "Card" },
+  ];
+
   const openItemType = () => {
-    console.log("Open item type selector");
+    setShowItemDropdown((s) => !s);
+    // ensure other dropdown closed
+    setShowPaymentDropdown(false);
   };
   const openPaymentType = () => {
-    console.log("Open payment type selector");
+    setShowPaymentDropdown((s) => !s);
+    // ensure other dropdown closed
+    setShowItemDropdown(false);
   };
 
   // Request runtime camera & storage permission on Android
@@ -43,21 +62,15 @@ export default function DetailsScreen({ navigation }) {
     if (Platform.OS !== "android") return true;
 
     try {
-      // Build list of permissions to request
       const permissions = [PermissionsAndroid.PERMISSIONS.CAMERA];
-
-      // Include storage perms for devices where needed
       permissions.push(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
       permissions.push(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
 
       const granted = await PermissionsAndroid.requestMultiple(permissions);
 
-      const cameraGranted = granted[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
-      const writeGranted = granted[PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE] === PermissionsAndroid.RESULTS.GRANTED;
-      const readGranted = granted[PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE] === PermissionsAndroid.RESULTS.GRANTED;
-
+      const cameraGranted =
+        granted[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
       if (cameraGranted) {
-        // good to go, storage may be optional depending on Android version
         return true;
       } else {
         return false;
@@ -69,7 +82,6 @@ export default function DetailsScreen({ navigation }) {
   }
 
   const openCamera = async () => {
-    // On Android request permissions first
     if (Platform.OS === "android") {
       const ok = await requestCameraPermissionsAndroid();
       if (!ok) {
@@ -91,7 +103,6 @@ export default function DetailsScreen({ navigation }) {
 
     try {
       const result = await launchCamera(options);
-      // result: { didCancel, errorCode, errorMessage, assets }
       if (result.didCancel) {
         return;
       }
@@ -120,7 +131,7 @@ export default function DetailsScreen({ navigation }) {
       recipientContact,
       photoUri,
     });
-    navigation?.navigate?.('ConfirmDetailsScreen')
+    navigation?.navigate?.("ConfirmDetailsScreen");
   };
 
   return (
@@ -135,20 +146,49 @@ export default function DetailsScreen({ navigation }) {
         <Text style={styles.subLabel}>What are you sending</Text>
         <Text style={styles.helper}>Select type of item (e.g gadget, document)</Text>
 
-        <TouchableOpacity style={styles.selectBox} activeOpacity={0.8} onPress={openItemType}>
-          <Text style={[styles.selectText, !itemType && styles.placeholderText]}>{itemType || "Select"}</Text>
-        </TouchableOpacity>
+        {/* Inline dropdown trigger */}
+        <View>
+          <TouchableOpacity style={styles.selectBox} activeOpacity={0.8} onPress={openItemType}>
+            <Text style={[styles.selectText, !itemType && styles.placeholderText]}>
+              {itemType || "Select"}
+            </Text>
+            <Text style={styles.chev}>{showItemDropdown ? "▴" : "▾"}</Text>
+          </TouchableOpacity>
+
+          {showItemDropdown && (
+            <View style={styles.dropdownList}>
+              {ITEM_OPTIONS.map((it) => (
+                <TouchableOpacity
+                  key={it.id}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setItemType(it.label);
+                    setShowItemDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>{it.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
 
         <View style={styles.prohibitedRow}>
           <Image source={ICON_INFO} style={styles.infoIcon} />
           <Text style={styles.prohibitedText}>
-            Our Prohibited Items include: blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah
+            Our Prohibited Items 
           </Text>
         </View>
 
         <Text style={[styles.subLabel, { marginTop: 18 }]}>Quantity</Text>
         <View style={styles.inputBox}>
-          <TextInput value={quantity} onChangeText={setQuantity} keyboardType="numeric" style={styles.input} />
+          <TextInput
+           value={quantity} 
+           onChangeText={setQuantity} 
+           keyboardType="numeric" 
+           style={styles.input} 
+            placeholderTextColor="#000"
+           />
         </View>
 
         <Text style={[styles.subLabel, { marginTop: 18 }]}>Select who pays</Text>
@@ -169,19 +209,55 @@ export default function DetailsScreen({ navigation }) {
         </View>
 
         <Text style={[styles.subLabel, { marginTop: 18 }]}>Payment type</Text>
-        <TouchableOpacity style={styles.selectBox} activeOpacity={0.8} onPress={openPaymentType}>
-          <Text style={[styles.selectText, !paymentType && styles.placeholderText]}>{paymentType || "Payment type"}</Text>
-          <Text style={styles.chev}>▾</Text>
-        </TouchableOpacity>
+
+        {/* Inline dropdown for payment */}
+        <View>
+          <TouchableOpacity style={styles.selectBox} activeOpacity={0.8} onPress={openPaymentType}>
+            <Text style={[styles.selectText, !paymentType && styles.placeholderText]}>
+              {paymentType || "Payment type"}
+            </Text>
+            <Text style={styles.chev}>{showPaymentDropdown ? "▴" : "▾"}</Text>
+          </TouchableOpacity>
+
+          {showPaymentDropdown && (
+            <View style={styles.dropdownList}>
+              {PAYMENT_OPTIONS.map((it) => (
+                <TouchableOpacity
+                  key={it.id}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setPaymentType(it.label);
+                    setShowPaymentDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>{it.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
 
         <Text style={[styles.subLabel, { marginTop: 18 }]}>Recipient Names</Text>
         <View style={styles.inputBox}>
-          <TextInput value={recipientName} onChangeText={setRecipientName} style={styles.input} />
+          <TextInput
+            value={recipientName}
+            onChangeText={setRecipientName}
+            style={styles.input}
+            placeholder="Name"
+             placeholderTextColor="#000"
+          />
         </View>
 
         <Text style={[styles.subLabel, { marginTop: 18 }]}>Recipient contact number</Text>
         <View style={styles.inputBox}>
-          <TextInput value={recipientContact} onChangeText={setRecipientContact} keyboardType="phone-pad" style={styles.input} />
+          <TextInput
+            value={recipientContact}
+            onChangeText={setRecipientContact}
+            keyboardType="phone-pad"
+            style={styles.input}
+            placeholder="Phone"
+             placeholderTextColor="#000"
+          />
         </View>
 
         {/* Camera / image area */}
@@ -229,12 +305,29 @@ const styles = StyleSheet.create({
   selectText: { color: "#233634", fontSize: 15 },
   placeholderText: { color: MUTED },
 
+  /* Inline dropdown list */
+  dropdownList: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E6ECEB",
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F4F3",
+  },
+  dropdownItemText: { fontSize: 15, color: "#233634" },
+
   prohibitedRow: { flexDirection: "row", alignItems: "flex-start", marginTop: 8 },
   infoIcon: { width: 18, height: 18, marginRight: 8, marginTop: 2 },
   prohibitedText: { color: "#9A6363", fontSize: 12, flex: 1 },
 
-  inputBox: { backgroundColor: LIGHT_BG, paddingVertical: 14, paddingHorizontal: 14, borderRadius: 8, flexDirection: "row", alignItems: "center", marginTop: 6 },
-  input: { flex: 1, color: "#233634", fontSize: 15 },
+  inputBox: { backgroundColor: LIGHT_BG, paddingVertical: 3, paddingHorizontal: 14, borderRadius: 8, flexDirection: "row", alignItems: "center", marginTop: 6 },
+  input: { flex: 1, color: "#233634", fontSize: 15, color: "#000" },
 
   radioRow: { flexDirection: "row", marginTop: 8, alignItems: "center" },
   radioWrap: { flexDirection: "row", alignItems: "center", marginRight: 20 },
@@ -271,4 +364,6 @@ const styles = StyleSheet.create({
 
   continueBtn: { marginTop: 28, backgroundColor: PRIMARY, paddingVertical: 16, borderRadius: 12, alignItems: "center", width: width - 40, alignSelf: "center" },
   continueText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+
+  /* Modal styles removed - kept none here since we use inline dropdowns */
 });

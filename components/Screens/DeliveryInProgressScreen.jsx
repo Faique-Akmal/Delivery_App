@@ -30,15 +30,14 @@ export default function DeliveryInProgressScreen({ navigation }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [rating, setRating] = useState(0);
 
-  const translateY = useRef(new Animated.Value(SHEET_COLLAPSED)).current; // starts at collapsed (offset from bottom)
+  // translateY used to move sheet: 0 => collapsed visible; negative => expanded upward
+  const translateY = useRef(new Animated.Value(SHEET_COLLAPSED)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const bannerOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // On mount open collapsed sheet (translateY measured as distance from bottom: 0 means sheet fully visible,
-    // but here we animate translateY from SHEET_COLLAPSED -> 0 for visible positioning)
-    // We'll animate so sheet appears by translating to 0 (visible).
-    translateY.setValue(SHEET_COLLAPSED); // off-screen by collapsed amount
+    // show collapsed sheet on mount
+    translateY.setValue(SHEET_COLLAPSED);
     Animated.parallel([
       Animated.timing(translateY, { toValue: 0, duration: 320, useNativeDriver: true }),
       Animated.timing(overlayOpacity, { toValue: 0.12, duration: 320, useNativeDriver: true }),
@@ -46,14 +45,14 @@ export default function DeliveryInProgressScreen({ navigation }) {
     ]).start();
   }, []);
 
-  // toggle between collapsed view and expanded review view
+  // toggle between collapsed and expanded
   const toggleExpand = () => {
     const toExpanded = !isExpanded;
     setIsExpanded(toExpanded);
 
     Animated.parallel([
       Animated.timing(translateY, {
-        toValue: toExpanded ? -(SHEET_EXPANDED - SHEET_COLLAPSED) : 0, // move up when expanded
+        toValue: toExpanded ? -(SHEET_EXPANDED - SHEET_COLLAPSED) : 0,
         duration: 320,
         useNativeDriver: true,
       }),
@@ -70,8 +69,8 @@ export default function DeliveryInProgressScreen({ navigation }) {
     ]).start();
   };
 
+  // close sheet (animate down) then go back
   const closeSheet = () => {
-    // animate sheet fully down (hide)
     Animated.parallel([
       Animated.timing(translateY, { toValue: SHEET_COLLAPSED, duration: 260, useNativeDriver: true }),
       Animated.timing(overlayOpacity, { toValue: 0, duration: 260, useNativeDriver: true }),
@@ -97,24 +96,26 @@ export default function DeliveryInProgressScreen({ navigation }) {
         </Animated.View>
       </SafeAreaView>
 
-      {/* Overlay to dim background */}
+      {/* Overlay to dim background + tap-to-close */}
       <Animated.View
-        pointerEvents="none"
+        pointerEvents="auto"
         style={[styles.overlay, { opacity: overlayOpacity }]}
-      />
+      >
+        <Pressable style={{ flex: 1 }} onPress={closeSheet} />
+      </Animated.View>
 
       {/* Bottom sheet container (animated transform) */}
       <Animated.View
         style={[
           styles.sheetContainer,
-          { transform: [{ translateY }] }, // translateY: 0 means collapsed visible; negative moves up for expanded
+          { transform: [{ translateY }] }, // translateY: 0 = collapsed visible; negative moves up for expanded
         ]}
       >
         <View style={styles.handleWrap}>
           <Pressable onPress={toggleExpand} style={styles.handle} />
         </View>
 
-        {/* Content changes slightly depending on collapsed/expanded state */}
+        {/* Content changes depending on collapsed/expanded state */}
         {!isExpanded ? (
           // COLLAPSED: courier card
           <View style={styles.card}>
@@ -141,6 +142,11 @@ export default function DeliveryInProgressScreen({ navigation }) {
                 <Image source={PHONE_ICON} style={styles.callIcon} />
               </TouchableOpacity>
             </View>
+
+            {/* Close button for collapsed state */}
+            <TouchableOpacity style={styles.closeBtnSheet} onPress={closeSheet}>
+              <Text style={styles.closeTextSheet}>Close</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           // EXPANDED: review form
@@ -162,6 +168,11 @@ export default function DeliveryInProgressScreen({ navigation }) {
 
             <TouchableOpacity style={styles.doneBtn} onPress={() => { /* submit rating */ }}>
               <Text style={styles.doneTxt}>Done</Text>
+            </TouchableOpacity>
+
+            {/* Close button for expanded state */}
+            <TouchableOpacity style={[styles.closeBtnSheet, { marginTop: 12 }]} onPress={closeSheet}>
+              <Text style={styles.closeTextSheet}>Close</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -277,4 +288,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   doneTxt: { color: "#fff", fontWeight: "700", fontSize: 16 },
+
+  // Close button style inside sheet
+  closeBtnSheet: { marginTop: 14, alignItems: "center" },
+  closeTextSheet: { color: "#C23B3B", fontWeight: "700" },
 });
