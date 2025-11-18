@@ -11,6 +11,10 @@ import BottomScreen from './BottomScreen';
 import DeliveryDetails from "../Screens/DeliveryDetails";
 import InstantDelivery from "../Screens/InstantDelivery";
 import ScheduleDelivery from "../Screens/ScheduleDelivery";
+import DetailsScreen from "../Screens/DetailsScreen";
+import ConfirmDetailsScreen from "../Screens/ConfirmDetailsScreen";
+import CourierOnWayScreen from "../Screens/CourierOnWayScreen";
+import DeliveryInProgressScreen from "../Screens/DeliveryInProgressScreen";
 
 
 const Stack = createStackNavigator();
@@ -58,6 +62,23 @@ export default function AppNavigator() {
         name="ScheduleDelivery"
         component={ScheduleDelivery}
       />
+       <Stack.Screen
+        name="DetailsScreen"
+        component={DetailsScreen}
+      />
+       <Stack.Screen
+        name="ConfirmDetailsScreen"
+        component={ConfirmDetailsScreen}
+      />
+       <Stack.Screen
+        name="CourierOnWayScreen"
+        component={CourierOnWayScreen}
+      />
+       <Stack.Screen
+        name="DeliveryInProgressScreen"
+        component={DeliveryInProgressScreen}
+      />
+ 
  
  
     </Stack.Navigator>

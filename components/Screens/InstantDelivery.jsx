@@ -165,7 +165,7 @@ export default function InstantDelivery({ navigation }) {
 
             <TouchableOpacity
               style={styles.nextButton}
-              onPress={() => navigation?.navigate?.("ScheduleDelivery")}
+              onPress={() => navigation?.navigate?.("DeliveryInProgressScreen")}
             >
               <Text style={styles.nextText}>Next</Text>
             </TouchableOpacity>

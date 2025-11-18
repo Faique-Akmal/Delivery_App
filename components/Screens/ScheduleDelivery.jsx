@@ -11,8 +11,9 @@ import {
   Pressable,
   StatusBar,
   SafeAreaView,
-  TextInput,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 const { height, width } = Dimensions.get("window");
 
@@ -27,11 +28,40 @@ const IMG_VAN = require("../images/Van.png");
 
 const SHEET_HEIGHT = height * 0.62;
 
+function pad(n) {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+function formatDate(d) {
+  // DD/MM/YYYY
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function formatTime(d) {
+  // HH:MM (12-hour) and compute am/pm
+  let hours = d.getHours();
+  const minutes = pad(d.getMinutes());
+  const ampm = hours >= 12 ? "pm" : "am";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return { timeStr: `${pad(hours)}:${minutes}`, ampm };
+}
+
 export default function ScheduleDelivery({ navigation }) {
   const [vehicle, setVehicle] = useState("bike");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+
+  // store as strings for display (kept backward-compatible with your UI)
+  const [date, setDateStr] = useState("");
+  const [time, setTimeStr] = useState("");
   const [ampm, setAmpm] = useState("pm");
+
+  // actual Date object for pickers
+  const [dateObj, setDateObj] = useState(new Date());
+
+  // picker visibility
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const [isOpen, setIsOpen] = useState(false);
 
   // animation values (start with sheet hidden)
@@ -83,6 +113,26 @@ export default function ScheduleDelivery({ navigation }) {
     }
   };
 
+  // Date picker handler
+  const onChangeDate = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === "ios"); // keep open on iOS if inline; hide on Android
+    if (selectedDate) {
+      setDateObj(selectedDate);
+      setDateStr(formatDate(selectedDate));
+    }
+  };
+
+  // Time picker handler
+  const onChangeTime = (event, selectedTime) => {
+    setShowTimePicker(Platform.OS === "ios");
+    if (selectedTime) {
+      setDateObj(selectedTime);
+      const { timeStr, ampm: ap } = formatTime(selectedTime);
+      setTimeStr(timeStr);
+      setAmpm(ap);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
@@ -125,7 +175,7 @@ export default function ScheduleDelivery({ navigation }) {
 
             <Text style={styles.label}>Pickup Location</Text>
             <View style={styles.inputBox}>
-              <Image source={ICON_LOCATION} style={{height:20, width:15, marginRight:12}} />
+              <Image source={ICON_LOCATION} style={{ height: 20, width: 15, marginRight: 12 }} />
               <Text style={styles.inputText}>32 Samwell Sq, Chevron</Text>
             </View>
 
@@ -138,31 +188,64 @@ export default function ScheduleDelivery({ navigation }) {
             <View style={styles.dtRow}>
               <View style={styles.dtCol}>
                 <Text style={styles.label}>Date</Text>
-                <TextInput
-                  placeholder="DD/MM/YYYY"
-                  value={date}
-                  onChangeText={setDate}
+
+                {/* Touchable that opens native date picker */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setShowDatePicker(true)}
                   style={styles.dtInput}
-                  keyboardType="numeric"
-                />
+                >
+                  <Text style={{ color: date ? "#233634" : "#9DA9A6" }}>
+                    {date || "DD/MM/YYYY"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* DateTimePicker (Android: shows modal; iOS: will show inline if desired) */}
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={dateObj}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onChangeDate}
+                  />
+                )}
               </View>
 
               <View style={styles.dtCol}>
                 <Text style={styles.label}>Time</Text>
+
+                {/* Touchable that opens native time picker */}
                 <View style={styles.timeRow}>
-                  <TextInput
-                    placeholder="HH:MM"
-                    value={time}
-                    onChangeText={setTime}
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => setShowTimePicker(true)}
                     style={[styles.dtInput, { flex: 1 }]}
-                  />
+                  >
+                    <Text style={{ color: time ? "#233634" : "#9DA9A6" }}>
+                      {time || "HH:MM"}
+                    </Text>
+                  </TouchableOpacity>
+
                   <TouchableOpacity
                     style={styles.ampmBox}
-                    onPress={() => setAmpm(ampm === "am" ? "pm" : "am")}
+                    onPress={() => {
+                      // toggle AM/PM manually (keeps displayed string but doesn't change underlying Date)
+                      setAmpm((p) => (p === "am" ? "pm" : "am"));
+                    }}
                   >
                     <Text style={styles.ampmText}>{ampm}</Text>
                   </TouchableOpacity>
                 </View>
+
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={dateObj}
+                    mode="time"
+                    is24Hour={false}
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onChangeTime}
+                  />
+                )}
               </View>
             </View>
 
@@ -194,8 +277,8 @@ export default function ScheduleDelivery({ navigation }) {
             <TouchableOpacity
               style={styles.nextButton}
               onPress={() => {
-                // example navigation after scheduling
-                navigation?.navigate?.("ConfirmDelivery", { vehicle, date, time, ampm });
+                // example navigation after scheduling (send formatted values)
+                navigation?.navigate?.("DetailsScreen", { vehicle, date, time, ampm });
               }}
             >
               <Text style={styles.nextText}>Next</Text>
